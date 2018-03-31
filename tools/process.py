@@ -82,7 +82,7 @@ def get_common_tokens(corpus, n):
     d = get_ordered_tokens(corpus)
     common_tokens = [item[0] for item in d]
     common_tokens = common_tokens[0:n]
-    common_tokens = common_tokens + [':',",",'.','to','a','the','in','of','and','is','rt <user> :']
+    common_tokens = common_tokens + [':',",",'.','to','a','the','in','of','and','is','<user>','<eos>']
     common_tokens = list(set(common_tokens))
     return common_tokens
 
@@ -94,6 +94,7 @@ def string2bins(bit_string, n_bins):
 
 def generate_bins(corpus, nbr_bins, num_tokens, common_bin_factor, replication_factor, seed, save_bins, corpus_name, ABS_PATH):
     if nbr_bins >= 2:
+        nbr_bins = nbr_bins + 1
         np.random.seed(seed)
         sub_bin_indices = np.random.choice(range(nbr_bins), size=replication_factor, replace=False)
         common_bin_indices = np.random.choice(range(nbr_bins), size=common_bin_factor, replace=False)
@@ -113,7 +114,7 @@ def generate_bins(corpus, nbr_bins, num_tokens, common_bin_factor, replication_f
         replicated_bin = list(itertools.chain(*sub_bins))  # just one bin
 
         bins = [replicated_bin if bins.index(bin_) in sub_bin_indices else bin_ for bin_ in bins]
-        bins = [list(set(bin_) - set(common_tokens_idx)) if bins.index(bin_) in common_bin_indices else bin_ for bin_ in
+        bins = [list(set(bin_).union(set(common_tokens_idx))) if bins.index(bin_) in common_bin_indices else bin_ for bin_ in
                 bins]
         zero = [list(set(tokens) - set(bin_)) for bin_ in bins]
 
@@ -121,7 +122,7 @@ def generate_bins(corpus, nbr_bins, num_tokens, common_bin_factor, replication_f
         np_bins = np.asarray(bins)
         np_zero = np.asarray(zero)
         np_common_tokens = np.asarray(common_tokens)
-        np.savez(ABS_PATH + 'save_bins/corpus_name{}bin{}common_bin_factor{}replication_factor{}seed{}num_tokens{}.npz'.format(corpus_name, nbr_bins, common_bin_factor, replication_factor, seed, num_tokens), np_bins=np_bins, np_zero=np_zero,np_common_tokens=np_common_tokens)
+        np.savez(ABS_PATH + 'save_bins/corpus_name{}bin{}common_bin_factor{}replication_factor{}seed{}num_tokens{}.npz'.format(corpus_name, nbr_bins-1, common_bin_factor, replication_factor, seed, num_tokens), np_bins=np_bins, np_zero=np_zero,np_common_tokens=np_common_tokens)
         print("Bins model saved")
     return bins, zero, common_tokens
 
@@ -130,6 +131,7 @@ def get_random_string(nbr_bins, nbr_words):
 
 def get_secret_text(secret_text, nbr_bins):
     #creating the string with the encoding of the letters and padding
+
     bit_string = ''.join(bin(ord(letter))[2:].zfill(8) for letter in secret_text)
     # secret_text = np.random.choice(range(args.bins), args.words)
     #an integer object from the given number in base 2

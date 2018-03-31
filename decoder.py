@@ -34,7 +34,7 @@ def onlyascii(char):
 
 def run(p=None, args_dic=None, encoded_text=None):
     epoch_start_time = time.time()
-    
+
     if p:
         print("Running code from terminal " + "-" * 100)
         ABS_PATH = os.path.abspath(".") + '/'
@@ -51,7 +51,7 @@ def run(p=None, args_dic=None, encoded_text=None):
         if args_dic['temperature'] < 1e-3:
             print("temperature has to be greater or equal 1e-3")
         encoded_data = encoded_text
-        
+
     print("Stegotext is '{}'".format(encoded_data))
 
     torch.nn.Module.dump_patches = True
@@ -131,7 +131,7 @@ def run(p=None, args_dic=None, encoded_text=None):
             # keeping only ascii
             possible_letters = [l for l in possible_letters if onlyascii(l)]
             return possible_letters
-        
+
         #handling padding
         length, to_remove = process.get_removal_len(all_decoded_strings, bin_len, step)
         length_limit_before_fixing_padding = length - step - to_remove
@@ -342,7 +342,7 @@ def run(p=None, args_dic=None, encoded_text=None):
         return to_return
 
     if args_dic['bins'] > 1:
-        bins, zero, common_tokens = process.generating_bins(ABS_PATH, args_dic['corpus_name'], args_dic['bins'], int(args_dic['bins']/2), args_dic['replication_factor'], args_dic['seed'],
+        bins, zero, common_tokens = process.generating_bins(ABS_PATH, args_dic['corpus_name'], args_dic['bins'], args_dic['bins'], args_dic['replication_factor'], args_dic['seed'],
                         args_dic['num_tokens'], args_dic['save_bins'], corpus)
 
         #extracting the data tokens
@@ -362,12 +362,16 @@ def run(p=None, args_dic=None, encoded_text=None):
 
         # Infer the bins that we used during the generate part of the algorithm
         encoded_words_bins = []
+        end_of_sentence = False
         for token in encoded_data_tokens:
             bins_for_token = []
             for idx, bin_ in enumerate(bins):
                 if token in bin_ and token not in common_tokens_idx:
+                    if idx == args_dic['bins']:
+                        end_of_sentence = True
+                        break
                     bins_for_token.append("{0:0{bit_len}b}".format(idx, bit_len=int_bin_len))
-            if len(bins_for_token) > 0:
+            if len(bins_for_token) > 0 and not end_of_sentence:
                 encoded_words_bins.append(bins_for_token)
 
 
@@ -375,6 +379,7 @@ def run(p=None, args_dic=None, encoded_text=None):
         start_time = time.time()
         #recursively trying to decode
         final_solution= recursion_decode(encoded_words_bins,'',0)
+
 
         #while the wrong path is taken, start again
         while final_solution == "error_decoding":

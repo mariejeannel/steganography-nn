@@ -20,6 +20,7 @@ import tools.process as process
 import tools.parser as parser
 from tools.rnn_language_training import data
 from torch.autograd import Variable
+from random import randint
 
 sys.path.append(".")
 
@@ -97,7 +98,7 @@ def run(p=None, args_dic=None, plaintext=None):
 
     if args_dic['bins'] > 1:
         #if we want to load the bins and save it if it exists
-        bins, zero, common_tokens = process.generating_bins(ABS_PATH, args_dic['corpus_name'], args_dic['bins'], int(args_dic['bins']/2), args_dic['replication_factor'], args_dic['seed'],
+        bins, zero, common_tokens = process.generating_bins(ABS_PATH, args_dic['corpus_name'], args_dic['bins'], int(args_dic['common_bin_factor']), args_dic['replication_factor'], args_dic['seed'],
                         args_dic['num_tokens'], args_dic['save_bins'], corpus)
 
 
@@ -116,6 +117,7 @@ def run(p=None, args_dic=None, plaintext=None):
         while i <= bin_sequence_length:
             output, hidden = model(input, hidden)
 
+
             #building the Tensor with our bins
             zero_index = zero[secret_text[:][i-1]]
             zero_index = torch.LongTensor(zero_index)
@@ -130,16 +132,61 @@ def run(p=None, args_dic=None, plaintext=None):
             word = process.get_next_word(input, word_weights, corpus)
 
             word = word.encode('ascii', 'ignore').decode('ascii')
-            stegotext.append(word)
 
             if word not in common_tokens:
                 i += 1
             w += 1
 
+            stegotext.append(word)
+
+
             if i % args_dic['log_interval'] == 0:
                 print("Total number of words", w)
                 print("Total length of secret", i)
                 print('| Generated {}/{} words'.format(i, len(secret_text)))
+
+
+        #indicating that this is the end of the sentence to decode
+        if word != '<eos>':
+            output, hidden = model(input, hidden)
+            zero_index = zero[args_dic['bins']]
+            zero_index = torch.LongTensor(zero_index)
+
+            word_weights = output.squeeze().data.div(args_dic['temperature']).exp().cpu()
+
+            # in case the bin contains all the words, don't constrain
+            if (len(zero_index) > 0):
+                word_weights.index_fill_(0, zero_index, 0)
+
+            # get the next word
+            word = process.get_next_word(input, word_weights, corpus)
+
+            word = word.encode('ascii', 'ignore').decode('ascii')
+
+            stegotext.append(word)
+
+        while word != '<eos>':
+            # building the Tensor with our bins
+            output, hidden = model(input, hidden)
+
+            # building the Tensor with our bins
+            zero_index = zero[randint(0,args_dic['bins'])]
+            zero_index = torch.LongTensor(zero_index)
+
+            word_weights = output.squeeze().data.div(args_dic['temperature']).exp().cpu()
+
+            # in case the bin contains all the words, don't constrain
+            if (len(zero_index) > 0):
+                word_weights.index_fill_(0, zero_index, 0)
+
+            # get the next word
+            word = process.get_next_word(input, word_weights, corpus)
+
+            word = word.encode('ascii', 'ignore').decode('ascii')
+
+            stegotext.append(word)
+
+
 
         stegotext_str = ' '.join(stegotext)
         with open(args_dic['outf'], 'w') as outf:
