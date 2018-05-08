@@ -37,25 +37,23 @@ class Corpus(object):
         with codecs.open(path,'r',encoding='utf8',errors='ignore') as f:
             tokens = 0
             for line in f:
-                line = line.replace("rt <user> :","rt")
+                line = line.replace("RT @<user> :", "rt")
                 words = line.split() + ['<eos>']
-                words = ["rt <user> :" if w == "rt" else w for w in words]
-                if '<url>' not in words:
-                    tokens += len(words)
-                    for word in words:
-                        self.dictionary.add_word(word)
+                words = ["RT @<user> :" if w == "rt" else w for w in words]
+                tokens += len(words)
+                for word in words:
+                    self.dictionary.add_word(word)
 
         # Tokenize file content
         with codecs.open(path,'r',encoding='utf8',errors='ignore') as f:
             ids = torch.LongTensor(tokens)
             token = 0
             for line in f:
-                line = line.replace("rt <user> :","rt")
+                line = line.replace("RT @<user> :", "rt")
                 words = line.split() + ['<eos>']
-                words = ["rt <user> :" if w == "rt" else w for w in words]
-                if '<url>' not in words:
-                    for word in words:
-                        ids[token] = self.dictionary.word2idx[word]
-                        token += 1
+                words = ["RT @<user> :" if w == "rt" else w for w in words]
+                for word in words:
+                    ids[token] = self.dictionary.word2idx[word]
+                    token += 1
 
         return ids

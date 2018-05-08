@@ -82,8 +82,9 @@ def get_common_tokens(corpus, n):
     d = get_ordered_tokens(corpus)
     common_tokens = [item[0] for item in d]
     common_tokens = common_tokens[0:n]
-    common_tokens = common_tokens + [':',",",'.','to','a','the','in','of','and','is','<user>','<eos>']
     common_tokens = list(set(common_tokens))
+    if common_tokens.__contains__("@<user>"):
+        common_tokens.remove("@<user>")
     return common_tokens
 
 #create the bins
@@ -108,8 +109,10 @@ def generate_bins(corpus, nbr_bins, num_tokens, common_bin_factor, replication_f
         # common words
         common_tokens = get_common_tokens(corpus, num_tokens)
         common_tokens_idx = [corpus.dictionary.word2idx[word] for word in common_tokens]
-        bins = [tokens[i:i + words_in_bin] for i in range(0, len(tokens), words_in_bin)] # words to keep in each bin...
-
+        eos_index = corpus.dictionary.word2idx['<eos>']
+        user_index = corpus.dictionary.word2idx['<user>']
+        dot_index = corpus.dictionary.word2idx[':']
+        bins = [tokens[i:i + words_in_bin] + [eos_index] + [dot_index] + [user_index] for i in range(0, len(tokens), words_in_bin)] # words to keep in each bin..
         sub_bins = [bins[index] for index in sub_bin_indices]
         replicated_bin = list(itertools.chain(*sub_bins))  # just one bin
 
